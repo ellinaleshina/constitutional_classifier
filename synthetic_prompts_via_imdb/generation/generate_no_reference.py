@@ -74,21 +74,24 @@ examples = prepare_reviews()[10:15]
 reference_prefix = "> [reference data] - 5 random film reviews\n"
 reference_data = reference_prefix + "\n".join(examples)
 
-print(reference_data)
-
 out = llm.create_chat_completion(
     messages=[
-        {"role": "system", "content": "You are a synthetic data generator. Your task is to analyze reference data (> [reference data]), borrow from it and generate new data that is similar to the reference data."},
-        {"role": "user", "content": "Generate 3 prompts for an LLM. Prompts should be about director Quentin Tarantino. Prompts should not mention Tarantino directly but should imply it or mention names of his movies. \n How to do it: \n 1. Analyze reference data. \n 2. Think about what should be the question/task behind the prompt that you will generate. But it still should be about Quentin Tarantino. \n 3. Generate 3 prompts borrowing style from the reference data, that are centered around the question/task you came up with in step 2. \n > [reference data] - 5 random film reviews. You should not pay attention to the films they talk about. Just borrow the writing style" + reference_data}
+        {"role": "system", "content": "You are a synthetic data generator. Your task is to generate synthetic data, insuring plausible diversity of the generated data."},
+        {"role": "user", "content": "Generate 3 prompts for an LLM. Prompts should be about director Quentin Tarantino. Prompts should not mention Tarantino directly but should imply it or mention names of his movies, retell plot/quotes of his movies, mention facts of his life/co-stars that he worked with. DO NOT QUENTIN TARANTINO NAME IN THE PROMPTS. \n How to do it: \n 1. Think about what should be the question/task behind the prompt that you will generate. But it still should be about Quentin Tarantino. \n 2. Generate 3 prompts of different styles, that are centered around the question/task for LLM you came up with in step 1."}
     ],
     response_format={
         "type": "json_object",
         "schema": {
             "type": "object",
             "properties": {
-                "thinking": {
-                    "type": "string", 
-                    "description": "Your analysis of the task, context and examples",
+                "questions": {
+                    "type": "array",
+                    "description": "Array of questions that you came up with in step 1",
+                    "items": {
+                        "type": "string",
+                        "description": "A question",
+                        "maxLength": 300,
+                    },
                 },
                 "prompts": {
                     "type": "array",
@@ -101,12 +104,13 @@ out = llm.create_chat_completion(
                     "maxItems": 3
                 },
             },
-            "required": ["thinking", "prompts"]
+            "required": ["questions", "prompts"]
         }
     },
-    temperature=0.5,
+    temperature=0.7,
     max_tokens=2048
 )
 
-token_counts = count_json_tokens(llm, out)
-ic(token_counts)
+ic(out)
+#
+# token_counts = count_json_tokens(llmw, out)
