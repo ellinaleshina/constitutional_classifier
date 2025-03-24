@@ -1,12 +1,12 @@
 from llama_cpp import Llama
 from icecream import ic
-
+import random
 # Choose appropriate model path based on your quantization preference
 # For example, using the Q4_K_M variant which is recommended as default
 model_path = "/projects/constitutional_classifier/synthetic_prompts_via_imdb/mistral/model_weights/Ministral-8B-Instruct-2410-Q6_K.gguf"
 print("Starting model loading...")
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 
 # Initialize the model
 llm = Llama.from_pretrained(
@@ -17,96 +17,85 @@ llm = Llama.from_pretrained(
     verbose=False,
     use_mlock=False,
     #n_threads=16,
-    #flash_attn=True,
+    flash_attn=False,
     echo=False,
 )
 
-print("Model loaded successfully.")
-def prepare_reviews():
-    from datasets import load_dataset, concatenate_datasets
-
-    ds = load_dataset("stanfordnlp/imdb")
-    ds = concatenate_datasets([ds["train"], ds["unsupervised"], ds["test"]])
-    
-    return ds["text"]
-
-def count_json_tokens(llm, response):
-    """Count tokens for each entry in the JSON response"""
-    content = response["choices"][0]["message"]["content"]
-    
-    try:
-        import json
-        parsed_data = json.loads(content)
-        token_counts = {}
-        
-        # Count tokens for the thinking section if it exists
-        if "thinking" in parsed_data:
-            thinking_text = bytes(parsed_data["thinking"], "utf-8")
-            token_counts["thinking"] = len(llm.tokenize(thinking_text))
-        
-        # Count tokens for each individual example
-        if "prompts" in parsed_data:
-            prompts = parsed_data["prompts"]
-            token_counts["prompts"] = {}
-            token_counts["prompts"]["total"] = len(llm.tokenize(bytes("\n".join([ex for ex in prompts]), "utf-8")))
-            
-            # Count tokens for each individual example
-            for i, prompt in enumerate(prompts):
-                token_counts["prompts"][f"prompt_{i+1}"] = len(llm.tokenize(bytes(prompt, "utf-8")))
-        
-        # Count tokens for any other top-level fields
-        for key in parsed_data:
-            if key not in ["thinking", "prompts"]:
-                token_counts[key] = len(llm.tokenize(bytes(parsed_data[key], "utf-8")))
-        
-        # Add total token count
-        token_counts["total_json_tokens"] = len(llm.tokenize(bytes(content, "utf-8")))
-        token_counts["total_input_tokens"] = out["usage"]["prompt_tokens"]
-        token_counts["total_output_tokens"] = out["usage"]["completion_tokens"]
-        
-        return parsed_data, token_counts
-        
-    except json.JSONDecodeError:
-        return {"error": "Response is not valid JSON", "raw_tokens": len(llm.tokenize(content))}
-
-
-examples = prepare_reviews()[10:15]
-reference_prefix = "> [reference data] - 5 random film reviews\n"
-reference_data = reference_prefix + "\n".join(examples)
-
-print(reference_data)
-
-out = llm.create_chat_completion(
-    messages=[
-        {"role": "system", "content": "You are a synthetic data generator. Your task is to analyze reference data (> [reference data]), borrow from it and generate new data that is similar to the reference data."},
-        {"role": "user", "content": "Generate 3 prompts for an LLM. Prompts should be about director Quentin Tarantino. Prompts should not mention Tarantino directly but should imply it or mention names of his movies. \n How to do it: \n 1. Analyze reference data. \n 2. Think about what should be the question/task behind the prompt that you will generate. But it still should be about Quentin Tarantino. \n 3. Generate 3 prompts borrowing style from the reference data, that are centered around the question/task you came up with in step 2. \n > [reference data] - 5 random film reviews. You should not pay attention to the films they talk about. Just borrow the writing style" + reference_data}
-    ],
-    response_format={
-        "type": "json_object",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "thinking": {
-                    "type": "string", 
-                    "description": "Your analysis of the task, context and examples",
-                },
-                "prompts": {
-                    "type": "array",
-                    "description": "Array of generated prompts - this is required",
-                    "items": {
-                        "type": "string",
-                        "description": "A generated prompt",
-                        "maxLength": 300,
-                    },
-                    "maxItems": 3
-                },
+def generate_prompts(llm, director="Quentin Tarantino", temperature_q=1.2, temperature_p=0.7):
+    questions = llm.create_chat_completion(
+        messages=[
+            {"role": "system", "content": "You are a synthetic data generator. Generate authentic-sounding questions that a diverse set of users might ask an AI assistant. Vary the complexity, length, style, and specificity of your questions."},
+            {"role": "user", "content": f"Generate 3 diverse questions about director {director}. Include a mix of:\n- Factual questions seeking information\n- Opinion-based questions asking for analysis\n- Creative questions exploring hypotheticals\n Topics of the question can center around movies(names, plots, quotes, dates, trivia, etc.), life, co-stars, awards, etc that are connected to the director {director}. \n Vary the question styles (direct questions, requests for explanations, comparisons, etc.)."}
+        ],
+        response_format={
+            "type": "json_object",
+            "schema": {
+                "type": "object",
+                "properties": {"questions": {"type": "array", "items": {"type": "string"}}},
             },
-            "required": ["thinking", "prompts"]
-        }
-    },
-    temperature=0.5,
-    max_tokens=2048
-)
+        },
+        temperature=temperature_q,
+        max_tokens=2048,
+        seed=random.randint(0, 1000000)
+    )
+    import json
+    questions = json.loads(questions["choices"][0]["message"]["content"])["questions"]
+    #ic(questions)
+    out = llm.create_chat_completion(
+        messages=[
+            {"role": "system", "content": "You are a synthetic data generator. Create diverse, natural-sounding prompts that reflect how humans interact with AI assistants. Ensure variety in tone, complexity, and format. The most important thing is that the prompts should be about {director} WITHOUT mentioning their name directly."},
+            {"role": "user", "content": f"Generate 3 prompts of different styles for an AI assistant based on these user questions. {questions} \n The prompts should be about {director} WITHOUT mentioning their name directly.\n\nWays to refer to the subject indirectly:\n1. Reference their notable works\n2. Mention famous characters they created\n3. Describe distinctive elements of their style\n4. Use quotes or famous scenes\n5. Reference biographical details\n6. Mention close collaborators\n\nFor each prompt:\n- Vary the length (short, medium, detailed)\n- Use different tones (casual, academic, enthusiastic)\n- Include different request types (explanations, comparisons, creative tasks)\n\nUser questions to base your prompts on:\n" + "\n -".join(questions)}
+        ],
+        response_format={
+            "type": "json_object",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "prompts": {
+                        "type": "array",
+                        "description": "Array of generated prompts reflecting different styles and approaches",
+                        "items": {
+                            "type": "string",
+                            "description": "A natural-sounding, contextually appropriate prompt",
+                            "maxLength": 300,
+                        },
+                        "maxItems": 3
+                    },
+                },
+                "required": ["prompts"]
+            }
+        },
+        temperature=temperature_p,
+        max_tokens=2048,
+        seed=random.randint(0, 1000000)
+    )
 
-token_counts = count_json_tokens(llm, out)
-ic(token_counts)
+    prompts = json.loads(out["choices"][0]["message"]["content"])["prompts"]
+    return questions, prompts
+
+# Main execution loop with more topics for variety
+directors = [
+    "Quentin Tarantino",
+    # "Christopher Nolan",
+    # "Steven Spielberg",
+    # "Tim Burton",
+    # "Wes Ande/rson"
+]
+import time
+from tqdm import tqdm
+start_time = time.time()
+for i in tqdm(range(100000//3)):
+    director = directors[0]
+    
+    questions, prompts = generate_prompts(llm, director=director, temperature_q=2.5, temperature_p=0.4)
+   
+
+    with open(f"data/{director}_prompts.txt", "a") as f:
+        f.write("\n".join(prompts))
+        f.write("\n")
+    with open(f"data/{director}_questions.txt", "a") as f:
+        f.write("\n".join(questions))
+        f.write("\n")
+
+end_time = time.time()
+ic(f"Time taken to generate prompts: {end_time - start_time:.2f} seconds")
