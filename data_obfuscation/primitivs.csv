@@ -1,0 +1,30 @@
+,primitiv,type,index,strong,test
+0,QuestionIdentificationDecorator(),roleplay,0,0,0
+1,AnswerStyleDecorator(),roleplay,1,0,0
+2,DialogStyleDecorator(),roleplay,2,0,0
+3,JekyllHydeDialogStyleDecorator(),roleplay,3,0,0
+4,AffirmativePrefixInjectionDecorator(),roleplay,4,1,0
+5,RefusalSuppressionDecorator(),roleplay,5,0,0
+6,ResearcherDecorator(),roleplay,6,1,0
+7,VillainDecorator(),roleplay,7,1,0
+8,ChainofThoughtDecorator(),roleplay,8,0,0
+9,CipherDecorator(),roleplay,9,1,0
+10,PayloadSplittingDecorator(),roleplay,10,1,0
+11,StyleInjectionShortDecorator(),roleplay,11,0,0
+12,StyleInjectionJSONDecorator(),roleplay,12,0,1
+13,FewShotDecorator(),roleplay,13,1,0
+14,WikipediaDecorator(),roleplay,14,0,0
+15,DistractorDecorator(),roleplay,15,1,0
+16,TemplateDecorator(),roleplay,16,0,0
+17,UTADecorator(),roleplay,17,1,1
+18,AIMDecorator(),roleplay,18,0,0
+19,DANDecorator(),roleplay,19,0,0
+20,LIVEGPTDecorator(),roleplay,20,0,0
+21,STANDecorator(),roleplay,21,1,0
+22,"ColorMixInDecorator(seed=789, modulus=3)",transform,22,0,0
+23,"HexStringMixInDecorator(seed=789, modulus=3)",transform,23,0,0
+24,"RareFishNameMixInDecorator(seed=789, modulus=3)",transform,24,0,0
+25,"FungiSpeciesMixInDecorator(seed=789, modulus=3)",transform,25,0,1
+26,"AbstractMathMixInDecorator(seed=789, modulus=3)",transform,26,0,0
+27,"CharDropout(seed=707, p=0.2)",transform,27,0,0
+28,Base64Decorator(),transform,28,0,0
