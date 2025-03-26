@@ -1,2 +1,7 @@
 .venv/*
 synthetic_prompts_via_imdb/mistral/model_weights/*
+classifier_finetuning/__pycache__/*
+classifier_finetuning/wandb/*
+classifier_finetuning/tarantino-classifier/*
+synthetic_prompts_via_imdb/generation/corrupted_data/*
+synthetic_prompts_via_imdb/generation/data/*

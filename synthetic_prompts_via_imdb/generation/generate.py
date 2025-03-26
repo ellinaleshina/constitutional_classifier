@@ -6,7 +6,7 @@ import random
 model_path = "/projects/constitutional_classifier/synthetic_prompts_via_imdb/mistral/model_weights/Ministral-8B-Instruct-2410-Q6_K.gguf"
 print("Starting model loading...")
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 # Initialize the model
 llm = Llama.from_pretrained(
@@ -39,7 +39,10 @@ def generate_prompts(llm, director="Quentin Tarantino", temperature_q=1.2, tempe
         seed=random.randint(0, 1000000)
     )
     import json
-    questions = json.loads(questions["choices"][0]["message"]["content"])["questions"]
+    try:
+        questions = json.loads(questions["choices"][0]["message"]["content"])["questions"]
+    except:
+        return None, None
     #ic(questions)
     out = llm.create_chat_completion(
         messages=[
@@ -75,10 +78,10 @@ def generate_prompts(llm, director="Quentin Tarantino", temperature_q=1.2, tempe
 
 # Main execution loop with more topics for variety
 directors = [
-    "Quentin Tarantino",
+    # "Quentin Tarantino",
     # "Christopher Nolan",
-    # "Steven Spielberg",
-    # "Tim Burton",
+    "Steven Spielberg",
+    "Tim Burton",
     # "Wes Ande/rson"
 ]
 import time
@@ -88,6 +91,8 @@ for i in tqdm(range(100000//3)):
     director = directors[0]
     
     questions, prompts = generate_prompts(llm, director=director, temperature_q=2.5, temperature_p=0.4)
+    if questions is None:
+        continue
    
 
     with open(f"data/{director}_prompts.txt", "a") as f:
