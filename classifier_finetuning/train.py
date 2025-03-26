@@ -20,25 +20,25 @@ import os
 from tqdm.auto import tqdm
 
 os.environ["WANDB_PROJECT"] = "tarantino-classifier"
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 # os.environ["OMP_NUM_THREADS"] = "1"
 # os.environ["MKL_NUM_THREADS"] = "1"
-device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Available device:", device)
 
 # Model configuration
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 RESTRICTED_CLASS = "Tarantino"
 OUTPUT_DIR = "./tarantino-classifier"
-DATA_PATH = "aggregated.csv"
+DATA_PATH = "balanced_train_subsample.csv"
 PROMPT_PATH = "input_classifier_prompt.txt"
 
 # Training configuration
 TRAIN_BATCH_SIZE = 3
 EVAL_BATCH_SIZE = 3
 LEARNING_RATE = 1e-4
-NUM_EPOCHS = 3
+NUM_EPOCHS = 9
 WEIGHT_DECAY = 0.01
 WARMUP_STEPS = 0
 FP16 = torch.cuda.is_available()
@@ -87,7 +87,7 @@ model.print_trainable_parameters()
 model.to(device)
 
 # Load and prepare data
-train_data, test_data = train_test_split_csv(DATA_PATH, train_ratio=0.8, seed=42)
+train_data, test_data = train_test_split_csv(DATA_PATH, train_ratio=0.85, seed=42)
 train_dataset = TrainObfuscatedPromptDataset(train_data, tokenizer, classifier_prompt)
 test_dataset = TestObfuscatedPromptDataset(test_data, tokenizer, classifier_prompt)
 
@@ -135,6 +135,7 @@ for epoch in range(NUM_EPOCHS):
     progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS} [Train]")
     
     for batch in progress_bar:
+        torch.cuda.empty_cache()
         optimizer.zero_grad()
         
         # Get batch data
