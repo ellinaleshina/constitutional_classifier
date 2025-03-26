@@ -1,0 +1,159 @@
+import torch
+import pandas as pd
+import numpy as np
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer,
+    get_scheduler,
+    Trainer,
+    TrainingArguments,
+    DataCollatorWithPadding
+)
+from peft import get_peft_model, LoraConfig, TaskType
+from dataset import TrainObfuscatedPromptDataset, TestObfuscatedPromptDataset, train_test_split_csv
+import evaluate
+from functools import partial
+from typing import Dict, Any, Optional, Tuple, List
+from torch.utils.data import DataLoader
+import wandb
+import os
+from tqdm.auto import tqdm
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+import torch
+
+def predict(text):
+    # Format the prompt
+    formatted_text = f"Prompt: {text} Answer:"
+    
+    # Tokenize input
+    inputs = tokenizer(formatted_text, return_tensors="pt").to(device)
+    
+    # Generate prediction
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=1,
+            temperature=0
+        )
+    
+    # Decode prediction
+    predicted_token_id = outputs[0][-1].item()
+    is_tarantino = predicted_token_id == tokenizer.convert_tokens_to_ids(" yes")
+    
+    return is_tarantino, "Tarantino" if is_tarantino else "Not Tarantino"
+
+
+def collate_fn(batch, tokenizer):
+    inputs = [item["formatted_prompt"] for item in batch]
+    labels = [item["label"] for item in batch]
+    
+    # Tokenize inputs
+    tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
+    
+    labels = torch.tensor(labels, dtype=torch.long).to(device)
+    
+    return {"labels": labels.to(device), "inputs": tokenized_inputs.to(device)}
+
+
+accuracy = evaluate.load("accuracy")
+precision = evaluate.load("precision")
+recall = evaluate.load("recall")
+def compute_metrics(predictions, labels):
+    return {
+        "accuracy": accuracy.compute(predictions=predictions, references=labels)["accuracy"],
+        # "precision": precision.compute(predictions=predictions, references=labels)["precision"],
+        # "recall": recall.compute(predictions=predictions, references=labels)["recall"]
+    }
+
+
+
+
+os.environ["WANDB_PROJECT"] = "tarantino-classifier-test"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+DATA_PATH = "Anderson_corrupted.csv"
+PROMPT_PATH = "input_classifier_prompt.txt"
+EVAL_BATCH_SIZE = 2
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# Load tokenizer and base model
+# tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier")
+# base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
+# tokenizer.pad_token = tokenizer.eos_token
+# # Load LoRA adapters into the base model
+# model = PeftModel.from_pretrained(base_model, "./tarantino-classifier")
+
+
+MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+tokenizer.pad_token = tokenizer.eos_token
+model = AutoModelForCausalLM.from_pretrained(MODEL)
+
+model.to(device)
+model.eval()  # Set to evaluation mode
+
+
+classifier_prompt = open(PROMPT_PATH, "r").read()
+test_data = pd.read_csv(DATA_PATH)
+test_dataset = TestObfuscatedPromptDataset(test_data, tokenizer, classifier_prompt)
+
+train_collate_fn = partial(collate_fn, tokenizer=tokenizer)
+
+eval_dataloader = DataLoader(
+    test_dataset, 
+    batch_size=EVAL_BATCH_SIZE, 
+    collate_fn=train_collate_fn,
+    num_workers=0
+)
+
+
+wandb.init(project="tarantino-classifier-test")
+
+
+    # Train
+all_predictions = []
+all_labels = []
+
+progress_bar = tqdm(eval_dataloader)
+
+with torch.no_grad():
+    for batch in progress_bar:
+        # Get batch data
+        labels = batch["labels"]
+        inputs = batch["inputs"]
+        
+        # Forward pass
+        outputs = model(**inputs)
+        
+        # Get logits for the last token position only
+        logits = outputs.logits[:, -1, :]
+        
+        # Get predictions
+        predictions = torch.argmax(logits, dim=-1) + 445
+        
+        # Store predictions and labels for metric computation
+        all_predictions.extend(predictions.cpu().numpy()) 
+        all_labels.extend(labels.cpu().numpy())
+
+        print(predictions.cpu().numpy())
+        print(labels.cpu().numpy())
+
+
+        #print(tokenizer.convert_tokens_to_ids("Yes"))
+
+
+# Compute metrics
+metrics = compute_metrics(all_predictions, all_labels)
+accuracy_score = metrics["accuracy"]
+# precision_score = metrics["precision"]
+# recall_score = metrics["recall"]
+
+# Log to wandb
+wandb.log({
+    "accuracy": accuracy_score,
+    # "recall" : recall_score,
+    # "precision" : precision_score
+})
+
+print(f"  Accuracy: {accuracy_score:.4f}")
+wandb.finish()
