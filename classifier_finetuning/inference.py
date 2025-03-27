@@ -7,13 +7,16 @@ import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import torch
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", type=bool, default=False)
+args = parser.parse_args()
 
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 PROMPT_PATH = "input_classifier_prompt.txt"
-EVAL_BATCH_SIZE = 2
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Load tokenizer and base model
 tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier-balanced")
@@ -27,22 +30,33 @@ model.eval()  # Set to evaluation mode
 
 classifier_prompt = open(PROMPT_PATH, "r").read()
 
-prompt = input("Please, input your query:\n")
-formatted_prompt = classifier_prompt.replace("{prompt}", str(prompt))
-tokenized_input = tokenizer(formatted_prompt, return_tensors="pt").to(device)
+finish = False if args.i else True
 
-outputs = model(**tokenized_input)
-logits = outputs.logits[:, -1, :]
-predictions = torch.argmax(logits, dim=-1)
+while True:
+    prompt = input("\nPlease, input your query:\n")
 
-answer = tokenizer.convert_ids_to_tokens(predictions.cpu().numpy())
+    if prompt == 'end':
+        break
 
-if answer[0] == "Yes":
-    print("Tarantino")
+    formatted_prompt = classifier_prompt.replace("{prompt}", str(prompt))
+    tokenized_input = tokenizer(formatted_prompt, return_tensors="pt").to(device)
 
-elif answer[0] == "No":
-    print("Not Tarantino")
+    outputs = model(**tokenized_input)
+    logits = outputs.logits[:, -1, :]
+    predictions = torch.argmax(logits, dim=-1)
 
-else:
-    print("Model's broken, sorry(((")
+    answer = tokenizer.convert_ids_to_tokens(predictions.cpu().numpy())
+
+    if answer[0] == "Yes":
+        print("Tarantino")
+
+    elif answer[0] == "No":
+        print("Not Tarantino")
+
+    else:
+        print("Model's broken, sorry...")
+
+    if finish:
+        break
+
 
