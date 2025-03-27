@@ -62,32 +62,34 @@ precision = evaluate.load("precision")
 recall = evaluate.load("recall")
 def compute_metrics(predictions, labels):
     return {
+        # Assuming being flagged as tarantino is the positive class
+        # Averaging is done globally over the whole dataset
         "accuracy": accuracy.compute(predictions=predictions, references=labels)["accuracy"],
-        # "precision": precision.compute(predictions=predictions, references=labels)["precision"],
-        # "recall": recall.compute(predictions=predictions, references=labels)["recall"]
+        "FPR": 1-precision.compute(predictions=predictions, references=labels, average="micro")["precision"],
+        "TPR": recall.compute(predictions=predictions, references=labels, average="micro")["recall"]
     }
 
 
 
 
 os.environ["WANDB_PROJECT"] = "tarantino-classifier-test"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-DATA_PATH = "Anderson_corrupted.csv"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+DATA_PATH = "/projects/constitutional_classifier/synthetic_prompts_via_imdb/generation/corrupted_data/Anderson_testing.csv"
 PROMPT_PATH = "input_classifier_prompt.txt"
 EVAL_BATCH_SIZE = 2
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Load tokenizer and base model
-# tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier")
-# base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
-# tokenizer.pad_token = tokenizer.eos_token
-# # Load LoRA adapters into the base model
-# model = PeftModel.from_pretrained(base_model, "./tarantino-classifier")
-
-
-MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(MODEL)
+tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier-balanced/")
+base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
 tokenizer.pad_token = tokenizer.eos_token
-model = AutoModelForCausalLM.from_pretrained(MODEL)
+# Load LoRA adapters into the base model
+model = PeftModel.from_pretrained(base_model, "./tarantino-classifier-balanced/")
+
+
+# MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+# tokenizer = AutoTokenizer.from_pretrained(MODEL)
+# tokenizer.pad_token = tokenizer.eos_token
+# model = AutoModelForCausalLM.from_pretrained(MODEL)
 
 model.to(device)
 model.eval()  # Set to evaluation mode
@@ -145,14 +147,14 @@ with torch.no_grad():
 # Compute metrics
 metrics = compute_metrics(all_predictions, all_labels)
 accuracy_score = metrics["accuracy"]
-# precision_score = metrics["precision"]
-# recall_score = metrics["recall"]
+fpr = metrics["FPR"]
+tpr = metrics["TPR"]
 
 # Log to wandb
 wandb.log({
     "accuracy": accuracy_score,
-    # "recall" : recall_score,
-    # "precision" : precision_score
+    "FPR": fpr,
+    "TPR": tpr
 })
 
 print(f"  Accuracy: {accuracy_score:.4f}")
