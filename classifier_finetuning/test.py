@@ -43,15 +43,18 @@ def compute_metrics(predictions, labels):
         # Assuming being flagged as tarantino is the positive class
         # Averaging is done globally over the whole dataset
         "accuracy": accuracy.compute(predictions=predictions, references=labels)["accuracy"],
-        "FPR": 1-precision.compute(predictions=predictions, references=labels, average="micro")["precision"],
-        "TPR": recall.compute(predictions=predictions, references=labels, average="micro")["recall"]
+        "FPR": 1-precision.compute(predictions=predictions, references=labels, average="macro")["precision"],
+        "TPR": recall.compute(predictions=predictions, references=labels, average="macro")["recall"]
     }
 
 
 os.environ["WANDB_PROJECT"] = "tarantino-classifier-test"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-DATA_PATH = "Anderson_corrupted.csv"
-RUN_NAME = "aggregated"
+
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+DATA_PATH = "./aggregated_test.csv"
+RUN_NAME = "aggregated_macro"
+
 PROMPT_PATH = "input_classifier_prompt.txt"
 EVAL_BATCH_SIZE = 2
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
