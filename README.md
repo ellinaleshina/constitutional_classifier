@@ -16,6 +16,10 @@ Our task for now is to train the classifier that bans any prompts about Quentin 
 4. Trained the model on this data
 5. Tested it in different settings (see the report)
 
-## Code usage
+## Environment setup
 
-### Data obfuscation
+To download all the dependences run the following command:
+
+```
+conda env create -f environment.yml
+```
