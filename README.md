@@ -23,3 +23,19 @@ To download all the dependences run the following command:
 ```
 conda env create -f environment.yml
 ```
+
+## Model inference
+
+To run the model inference you should go to the `classifier_finetuning` directory, run `python inference.py` and input your prompt into the stdin.
+
+If the prompt is related to Tarantino, output will be "Tarantino", or "Not Tarantino" otherwise. 
+
+The output should be like in the code below:
+
+```
+(constitution) root@a7a2bfe37bf6:/workspace/constitutional_classifier/classifier_finetuning# python inference.py 
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+Please, input your query:
+When was Tarantino born?
+Tarantino
+```
