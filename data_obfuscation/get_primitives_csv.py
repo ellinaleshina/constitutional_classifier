@@ -53,22 +53,21 @@ COMBINATION = [
         CharDropout(seed=707, p=0.1)
         )""",
 
-    """
-        UTADecorator().then(
+    """UTADecorator().then(
         StyleInjectionJSONDecorator()
         ).then(
         FungiSpeciesMixInDecorator(seed=789, modulus=3)
         )""",
 
-        """
-        DialogStyleDecorator().then(
+        
+    """DialogStyleDecorator().then(
         FungiSpeciesMixInDecorator(seed=789, modulus=3)
         )""",
 
-        """
-        AbstractMathMixInDecorator(seed=789, modulus=3).then(
+        
+    """AbstractMathMixInDecorator(seed=789, modulus=3).then(
         DistractorDecorator()
-        )""",
+        )"""
 ]
 
 import pandas as pd
@@ -89,7 +88,7 @@ df_3 = pd.DataFrame({
     'type' : "combination"
 })
 
-df = pd.concat([df, df_2], ignore_index=True)
+df = pd.concat([df, df_2, df_3], ignore_index=True)
 
 df['index'] = np.arange(len(df))
 
@@ -111,20 +110,20 @@ test_primitives = {
     "UTADecorator()",
     """StyleInjectionJSONDecorator()""",
     """FungiSpeciesMixInDecorator(seed=789, modulus=3)""",
-        """
-        UTADecorator().then(
+        
+    """UTADecorator().then(
         StyleInjectionJSONDecorator()
         ).then(
         FungiSpeciesMixInDecorator(seed=789, modulus=3)
         )""",
 
-        """
-        DialogStyleDecorator().then(
+        
+    """DialogStyleDecorator().then(
         FungiSpeciesMixInDecorator(seed=789, modulus=3)
         )""",
 
-        """
-        AbstractMathMixInDecorator(seed=789, modulus=3).then(
+        
+    """AbstractMathMixInDecorator(seed=789, modulus=3).then(
         DistractorDecorator()
         )"""
 }

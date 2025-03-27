@@ -29,12 +29,12 @@ class AttackGenerator:
         return decorated_prompts
 
 
-data_path = "/workspace/constitutions/input_data/Spielberg.txt"
-output_path = "/workspace/constitutions/obfuscated_data/Spielberg_corrupted.csv"
+data_path = "/workspace/constitutions/input_data/Tarantino_2.txt"
+output_path = "/workspace/constitutions/obfuscated_data/Tarantino_3_corrupted.csv"
 
 OUT_TYPE = 'csv'
 attacker = AttackGenerator(train_primitives.primitiv.tolist())
-prompt_nature = 'Spielberg'
+prompt_nature = 'Tarantino'
 
 
 if OUT_TYPE == 'txt':
