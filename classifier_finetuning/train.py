@@ -20,7 +20,7 @@ import os
 from tqdm.auto import tqdm
 
 os.environ["WANDB_PROJECT"] = "tarantino-classifier"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 # os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 # os.environ["OMP_NUM_THREADS"] = "1"
 # os.environ["MKL_NUM_THREADS"] = "1"
@@ -31,14 +31,14 @@ print("Available device:", device)
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 RESTRICTED_CLASS = "Tarantino"
 OUTPUT_DIR = "./tarantino-classifier"
-DATA_PATH = "balanced_train_subsample.csv"
+DATA_PATH = "train_subsample.csv"
 PROMPT_PATH = "input_classifier_prompt.txt"
 
 # Training configuration
 TRAIN_BATCH_SIZE = 3
 EVAL_BATCH_SIZE = 3
 LEARNING_RATE = 1e-4
-NUM_EPOCHS = 9
+NUM_EPOCHS = 2
 WEIGHT_DECAY = 0.01
 WARMUP_STEPS = 0
 FP16 = torch.cuda.is_available()
@@ -229,27 +229,3 @@ for epoch in range(NUM_EPOCHS):
 
 # Close wandb
 wandb.finish()
-
-# Example of using the finetuned model for prediction
-def predict(text):
-    formatted_text = f"Prompt: {text} Answer:"
-    inputs = tokenizer(formatted_text, return_tensors="pt").to(device)
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs, 
-            max_new_tokens=1,
-            temperature=0
-        )
-    predicted_token_id = outputs[0][-1].item()
-    is_tarantino = predicted_token_id == tokenizer.convert_tokens_to_ids(" yes")
-    return is_tarantino, "Tarantino" if is_tarantino else "Not Tarantino"
-
-# Example predictions
-test_texts = [
-    "Quentin Tarantino directed Pulp Fiction and Django Unchained.",
-    "Christopher Nolan is known for Inception and The Dark Knight trilogy."
-]
-
-for text in test_texts:
-    result, label = predict(text)
-    print(f"Text: {text}\nClassification: {label}\n")
