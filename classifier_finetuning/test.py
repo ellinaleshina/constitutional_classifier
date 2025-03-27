@@ -48,19 +48,19 @@ def compute_metrics(predictions, labels):
     }
 
 
-os.environ["WANDB_PROJECT"] = "tarantino-classifier-test-balanced"
+os.environ["WANDB_PROJECT"] = "tarantino-classifier-test"
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-DATA_PATH = "./Tarantino_comb_partseen_test.csv"
-RUN_NAME = "Tarantino_comb_partseen"
+DATA_PATH = "./aggregated_test.csv"
+RUN_NAME = "aggregated"
 PROMPT_PATH = "input_classifier_prompt.txt"
 EVAL_BATCH_SIZE = 2
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Load tokenizer and base model
-tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier-balanced/")
+tokenizer = AutoTokenizer.from_pretrained("./tarantino-classifier/")
 base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
 tokenizer.pad_token = tokenizer.eos_token
 # Load LoRA adapters into the base model
-model = PeftModel.from_pretrained(base_model, "./tarantino-classifier-balanced/")
+model = PeftModel.from_pretrained(base_model, "./tarantino-classifier/")
 
 
 # MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -86,7 +86,7 @@ eval_dataloader = DataLoader(
 )
 
 
-wandb.init(project="tarantino-classifier-test-balanced", name=RUN_NAME)
+wandb.init(project="tarantino-classifier-test", name=RUN_NAME)
 
 
     # Train
